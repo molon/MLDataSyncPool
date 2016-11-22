@@ -1,0 +1,12 @@
+source 'https://github.com/CocoaPods/Specs.git'
+
+platform :ios, '7.0'
+
+workspace 'MLDataSyncPool.xcworkspace'
+
+target 'MLDataSyncPool' do
+	project 'MLDataSyncPool.xcodeproj'
+    
+    pod 'MLDataSyncPool', :path => '../MLDataSyncPool.podspec'
+    pod 'MLKit', '~>0.2.3'
+end
