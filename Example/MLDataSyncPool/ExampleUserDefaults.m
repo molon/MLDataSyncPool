@@ -33,7 +33,7 @@ NSString * const UserDetailsDidChangeNotificationUserInfoKey = @"userIDs";
 
 //同步一些最新用户信息到本地，实际项目肯定不能这样存，这是demo
 - (void)syncUsers:(NSArray<User*>*)users {
-    NSMutableDictionary<NSString*,User *> *result = [self.users mutableCopy];
+    NSMutableDictionary<NSString*,User *><User> *result = [self.users mutableCopy];
     
     NSMutableArray *notificationUserIDs = [NSMutableArray array];
     
@@ -52,8 +52,8 @@ NSString * const UserDetailsDidChangeNotificationUserInfoKey = @"userIDs";
     //整理完重新存储
     self.users = result;
     
-#warning 需要考虑如果在实际当中，投递实体出去好，还是投递ID好，ID的话会引起多次查询，但是好处是若这里有没显示的ID，其不会进行无用的实体查询
-    [[NSNotificationCenter defaultCenter]postNotificationName:UserDetailsDidChangeNotificationName object:nil userInfo:@{UserDetailsDidChangeNotificationUserInfoKey:notificationUserIDs}];
+    //投递更新的userIDs出去
+    [[NSNotificationCenter defaultCenter]postNotificationOnMainThreadWithName:UserDetailsDidChangeNotificationUserInfoKey object:nil userInfo:@{UserDetailsDidChangeNotificationUserInfoKey:notificationUserIDs}];
 }
 
 
@@ -68,7 +68,7 @@ NSString * const UserDetailsDidChangeNotificationUserInfoKey = @"userIDs";
     
     if ([u needUpdate]) {
         //向MLDataSyncPool里投递同步任务
-#warning not set
+#warning not add
     }
 }
 
