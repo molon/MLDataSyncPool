@@ -37,15 +37,21 @@ PODS:
   - MLPersonalModel (11.1.0)
   - MLRefreshControl (0.1.1)
   - SAMKeychain (1.5.2)
+  - SDWebImage (3.8.2):
+    - SDWebImage/Core (= 3.8.2)
+  - SDWebImage/Core (3.8.2)
   - YYCache (1.0.4)
 
 DEPENDENCIES:
   - MLDataSyncPool (from `../MLDataSyncPool.podspec`)
-  - MLKit (~> 0.2.3)
+  - MLKit (from `~/MLProjects/MLKit`)
+  - SDWebImage (~> 3.8.2)
 
 EXTERNAL SOURCES:
   MLDataSyncPool:
     :path: "../MLDataSyncPool.podspec"
+  MLKit:
+    :path: "~/MLProjects/MLKit"
 
 SPEC CHECKSUMS:
   AFNetworking: 5e0e199f73d8626b11e79750991f5d173d1f8b67
@@ -57,8 +63,9 @@ SPEC CHECKSUMS:
   MLPersonalModel: 8abb253e11eb143c29f97bcd158a542da5b38729
   MLRefreshControl: a2c4746d9b9a456aa93f16f5b20a0438c2717c28
   SAMKeychain: 1865333198217411f35327e8da61b43de79b635b
+  SDWebImage: '098e97e6176540799c27e804c96653ee0833d13c'
   YYCache: 8105b6638f5e849296c71f331ff83891a4942952
 
-PODFILE CHECKSUM: 3a6f589d6c830d133ab5314e066b9db09b35e537
+PODFILE CHECKSUM: a780ee648bcc7e5e1f9815e361743adfc18a260f
 
 COCOAPODS: 1.1.1

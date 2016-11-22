@@ -7,18 +7,52 @@
 //
 
 #import "UserTableViewCell.h"
+#import "ExampleUserDefaults.h"
+#import <UIImageView+WebCache.h>
+
+@interface UserTableViewCell()
+
+@property (nonatomic, strong) User *user;
+
+@end
 
 @implementation UserTableViewCell
 
-- (void)awakeFromNib {
-    [super awakeFromNib];
-    // Initialization code
+- (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
+    self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
+    if (self) {
+        [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(reload) name:UserDetailsDidChangeNotificationName object:nil];
+    }
+    return self;
 }
 
-- (void)setSelected:(BOOL)selected animated:(BOOL)animated {
-    [super setSelected:selected animated:animated];
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter]removeObserver:self];
+}
 
-    // Configure the view for the selected state
+#pragma mark - event
+- (void)reload:(NSNotification*)notification {
+    NSMutableArray *userIDs = notification.userInfo[UserDetailsDidChangeNotificationUserInfoKey];
+    if ([userIDs containsObject:self.userID]) {
+        //更新UI
+        self.user = [[ExampleUserDefaults defaults] userWithUserID:self.userID];
+    }
+}
+
+#pragma mark - setter
+- (void)setUserID:(NSString *)userID {
+    _userID = [userID copy];
+    
+    //更新UI，并且对useriD标记使用
+    self.user = [[ExampleUserDefaults defaults] userWithUserID:userID];
+    [[ExampleUserDefaults defaults]useUserID:userID];
+}
+
+- (void)setUser:(User *)user {
+    _user = user;
+
+    [self.imageView sd_setImageWithURL:user.avatar];
+    self.textLabel.text = user.name;
 }
 
 @end

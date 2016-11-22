@@ -8,5 +8,7 @@ target 'MLDataSyncPool' do
 	project 'MLDataSyncPool.xcodeproj'
     
     pod 'MLDataSyncPool', :path => '../MLDataSyncPool.podspec'
-    pod 'MLKit', '~>0.2.3'
+#    pod 'MLKit', '~>0.2.3'
+    pod 'MLKit', :path => '~/MLProjects/MLKit'
+    pod 'SDWebImage', '~> 3.8.2'
 end

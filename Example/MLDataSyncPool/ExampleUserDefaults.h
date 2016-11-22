@@ -7,10 +7,18 @@
 //
 
 #import <MLKit/MLKit.h>
+#import "User.h"
 
-@class User;
+FOUNDATION_EXPORT NSString * const UserDetailsDidChangeNotificationName;
+FOUNDATION_EXPORT NSString * const UserDetailsDidChangeNotificationUserInfoKey;
+
+#warning 这个只是demo罢了，简单搞一搞，实际情况请使用sqlite
 @interface ExampleUserDefaults : MLUserDefaults
 
-@property (nonatomic, strong) NSArray<User *> *users;
+//获取User信息
+- (User*)userWithUserID:(NSString*)userID;
+
+//标记使用了一次
+- (void)useUserID:(NSString*)userID;
 
 @end
