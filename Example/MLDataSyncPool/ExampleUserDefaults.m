@@ -76,7 +76,8 @@ NSString * const UserDetailsDidChangeNotificationUserInfoKey = @"userIDs";
 #pragma mark - event
 //每次active都尝试去刷新要使用的User信息
 - (void)applicationDidBecomeActive {
-#warning 这里dirty了是OK，但是当前显示的User并没有立即获取到通知，他们不会去执行signUse方法的
+#warning 这里dirty了是OK，但是当前显示的User并没有立即获取到通知，他们不会去执行signUse方法的，这个还只能他们自己做，因为这里并不知道哪些User在显示中，还有就是其实非空详情用户，这点及时性更新真心没有太大必要，这个不加也无妨。
+    
     //dirty所有user
     for (User *u in [self.users allValues]) {
         u.dirty = YES;
@@ -136,19 +137,19 @@ NSString * const UserDetailsDidChangeNotificationUserInfoKey = @"userIDs";
 
 - (User*)userWithUserID:(NSString*)userID {
 #warning 这里如果实际做的话，由于是sqlite存储，每次都去查一次很耗性能，最好得在这里做内存缓存，根据一些方式控制内存缓存大小，例如双链表LRU
-    User *u = self.users[userID];
+    return self.users[userID];
+}
+
+//标记使用了一次
+- (void)signUseForUserID:(NSString*)userID {
+    User *u = [self userWithUserID:userID];
     if (!u) {
         u = [User new];
         u.ID = userID;
         u.dirty = YES;
         [self syncUsers:@[u]];
     }
-    return u;
-}
-
-//标记使用了一次
-- (void)signUseForUserID:(NSString*)userID {
-    User *u = [self userWithUserID:userID];
+    
     //向MLDataSyncPool里投递同步任务，新存储要以立即更新模式
     if ([u isNoDetail]) {
         [_dataSyncPool syncDataWithKeys:@[userID] way:MLDataSyncWayRightNow];
@@ -158,6 +159,15 @@ NSString * const UserDetailsDidChangeNotificationUserInfoKey = @"userIDs";
 }
 
 - (void)syncUsersWithUserIDs:(NSArray*)userIDs {
+    //这里建立下新记录，否则的话只有在使用的时候和拉取成功后会建立，这样的话就有可能在极端情况下丢失部分存储
+    [userIDs enumerateObjectsUsingBlock:^(NSString *userID, NSUInteger idx, BOOL * _Nonnull stop) {
+        if (![self userWithUserID:userID]) {
+            User *u = [User new];
+            u.ID = userID;
+            u.dirty = YES;
+            [self syncUsers:@[u]];
+        }
+    }];
     [_dataSyncPool syncDataWithKeys:userIDs way:MLDataSyncWayRightNow];
 }
 
