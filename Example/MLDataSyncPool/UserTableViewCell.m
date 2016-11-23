@@ -21,7 +21,7 @@
 - (instancetype)initWithStyle:(UITableViewCellStyle)style reuseIdentifier:(NSString *)reuseIdentifier {
     self = [super initWithStyle:style reuseIdentifier:reuseIdentifier];
     if (self) {
-        [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(reload) name:UserDetailsDidChangeNotificationName object:nil];
+        [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(reload:) name:UserDetailsDidChangeNotificationName object:nil];
     }
     return self;
 }
@@ -51,6 +51,7 @@
 - (void)setUser:(User *)user {
     _user = user;
 
+#warning image这样搞没啥屌用
     [self.imageView sd_setImageWithURL:user.avatar];
     self.textLabel.text = user.name;
 }

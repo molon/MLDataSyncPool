@@ -13,7 +13,6 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
     MLDataSyncPullStatusPulling, //拉取中
 };
 
-#define kInvalidFailCount 3 //发现3次失败就认为这个key压根就是不靠谱了，直接忽略就行了
 @interface MLDataSyncPoolTask : NSObject
 
 @property (nonatomic, copy) NSString *key;
@@ -30,6 +29,11 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
 
 @interface MLDataSyncPool()
 
+@property (nonatomic, assign) NSInteger maxFailCount;
+@property (nonatomic, assign) NSTimeInterval delay;
+@property (nonatomic, copy) void(^pullBlock)(NSSet *keys,MLDataSyncPoolPullCallBackBlock callback);
+@property (nonatomic, copy) void(^newDataBlock)(NSDictionary *datas);
+
 //所有任务
 @property (nonatomic, strong) NSMutableDictionary *tasks;
 
@@ -38,6 +42,29 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
 @implementation MLDataSyncPool {
     NSDate *_lastRequestSyncTime; //最后的请求同步的时间
     BOOL _delayLoopRunning; //delay循环是否在运行中
+}
+
+- (instancetype)initWithDelay:(NSTimeInterval)delay maxFailCount:(NSInteger)maxFailCount pullBlock:(void (^)(NSSet *, MLDataSyncPoolPullCallBackBlock))pullBlock newDataBlock:(void (^)(NSDictionary *))newDataBlock {
+    self = [super init];
+    if (self) {
+        self.tasks = [NSMutableDictionary dictionary];
+        self.maxFailCount = maxFailCount;
+        self.delay = delay;
+        self.pullBlock = pullBlock;
+        self.newDataBlock = newDataBlock;
+    }
+    return self;
+}
+
+#pragma mark - setter
+- (void)setMaxFailCount:(NSInteger)maxFailCount {
+    NSAssert(maxFailCount>0, @"maxFailCount must >0");
+    _maxFailCount = maxFailCount;
+}
+
+- (void)setDelay:(NSTimeInterval)delay {
+    NSAssert(delay>10, @"delay must >10");
+    _delay = delay;
 }
 
 #pragma mark - helper
@@ -53,18 +80,21 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
         
         hasChange = YES;
     }
-    //即使已有对应任务在请求中，也可以更新其syncWay，因为有可能对齐拉取失败，失败后要以新的syncWay为准
-    if (task.syncWay!=syncWay) {
+    //即使已有对应任务在请求中，也可以更新其syncWay，因为有可能拉取失败，失败后要以新的syncWay为准
+    //但是呢，不能从rightNow方式更改为delay方式，标记过rightNow的key就是要尽量得到同步
+    if (task.syncWay!=syncWay&&syncWay!=MLDataSyncWayDelay) {
         task.syncWay = syncWay;
-#warning 需要想想从delay变为right ok，但反过来是不是合适
+        
         hasChange = YES;
     }
+    
+    return hasChange;
 }
 
 - (NSSet*)allValidWaitTasks {
     NSMutableSet *result = [NSMutableSet set];
     [[_tasks allValues]enumerateObjectsUsingBlock:^(MLDataSyncPoolTask *t, NSUInteger idx, BOOL * _Nonnull stop) {
-        if (t.failCount<kInvalidFailCount&&t.status==MLDataSyncPullStatusWait) {
+        if (t.failCount<_maxFailCount&&t.status==MLDataSyncPullStatusWait) {
             [result addObject:t];
         }
     }];
@@ -73,6 +103,7 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
 
 - (void)doPullWithValidWaitTasks:(NSSet*)waitTasks foundEmptyBlock:(void(^)())foundEmptyBlock {
     NSAssert(self.pullBlock, @"pullBlock must not be nil");
+    NSAssert(self.newDataBlock, @"newDataBlock must not be nil");
     if (waitTasks.count<=0) {
         if (foundEmptyBlock) foundEmptyBlock();
         return;
@@ -101,6 +132,8 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
                 t.failCount++;
             }
         }
+        
+        self.newDataBlock(result);
         
         [self checkAndDoPullWithFoundEmptyBlock:foundEmptyBlock];
     };
@@ -141,7 +174,7 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
     _delayLoopRunning = YES;
     
     //判断上次请求sync时间到现在是否超过了delay
-    NSTimeInterval offset = _delay-[[NSDate date] timeIntervalSinceDate:_lastRequestSyncTime];
+    NSTimeInterval offset = _delay-[[NSDate date] timeIntervalSinceDate:_lastRequestSyncTime]*1000;
     if (offset<=0) {
         __weak __typeof__(self) weak_self = self;
         [self doPullWithValidWaitTasks:[self allValidWaitTasks] foundEmptyBlock:^{

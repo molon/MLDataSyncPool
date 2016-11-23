@@ -11,7 +11,7 @@
 
 @interface ExampleAPIHelper : BaseAPIHelper
 
-@property (nonatomic, copy) NSString *p_userIds;
+@property (nonatomic, copy) NSString *p_userIDs;
 
 @property (nonatomic, strong) NSArray<User *><User> *r_rows;
 
