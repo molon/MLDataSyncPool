@@ -76,13 +76,15 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
         task = [MLDataSyncPoolTask new];
         task.key = key;
         task.status = MLDataSyncPullStatusWait;
+        task.syncWay = syncWay;
+        
         _tasks[key] = task; //记录下来
         
         hasChange = YES;
     }
     //即使已有对应任务在请求中，也可以更新其syncWay，因为有可能拉取失败，失败后要以新的syncWay为准
     //但是呢，不能从rightNow方式更改为delay方式，标记过rightNow的key就是要尽量得到同步
-    if (task.syncWay!=syncWay&&syncWay!=MLDataSyncWayDelay) {
+    else if (task.syncWay!=syncWay&&syncWay!=MLDataSyncWayDelay) {
         task.syncWay = syncWay;
         
         hasChange = YES;
@@ -93,7 +95,7 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
 
 - (NSSet*)allValidWaitTasks {
     NSMutableSet *result = [NSMutableSet set];
-    [[_tasks allValues]enumerateObjectsUsingBlock:^(MLDataSyncPoolTask *t, NSUInteger idx, BOOL * _Nonnull stop) {
+    [_tasks enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, MLDataSyncPoolTask *t, BOOL * _Nonnull stop) {
         if (t.failCount<_maxFailCount&&t.status==MLDataSyncPullStatusWait) {
             [result addObject:t];
         }
@@ -166,15 +168,11 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
     }
 }
 
-- (void)doDelayPull {
-    //得保证delayLoop同时只有一个在执行
-    if (_delayLoopRunning) {
-        return;
-    }
-    _delayLoopRunning = YES;
-    
+//delay loop 递归
+- (void)doDelayPullWithoutCheckRunning {
     //判断上次请求sync时间到现在是否超过了delay
-    NSTimeInterval offset = _delay-[[NSDate date] timeIntervalSinceDate:_lastRequestSyncTime]*1000;
+    NSTimeInterval since = [[NSDate date] timeIntervalSinceDate:_lastRequestSyncTime]*1000;
+    NSTimeInterval offset = _delay-since;
     if (offset<=0) {
         __weak __typeof__(self) weak_self = self;
         [self doPullWithValidWaitTasks:[self allValidWaitTasks] foundEmptyBlock:^{
@@ -184,10 +182,20 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
         }];
     }else{
         //否则等待offset后再尝试一次，中间如果又有更改那就继续delay了
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(offset * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            [self doDelayPull];
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(offset * NSEC_PER_MSEC)), dispatch_get_main_queue(), ^{
+            [self doDelayPullWithoutCheckRunning];
         });
     }
+}
+
+- (void)doDelayPull {
+    //得保证delayLoop同时只有一个在执行
+    if (_delayLoopRunning) {
+        return;
+    }
+    _delayLoopRunning = YES;
+    
+    [self doDelayPullWithoutCheckRunning];
 }
 
 #pragma mark - outcall
@@ -206,12 +214,17 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
     
     _lastRequestSyncTime = [NSDate date];
     
+    //TIPS: delay way而且_delayLoopRunning为YES的情况在这是还去check必然无意义的，为了性能考虑简单做下过滤吧
+    if (way==MLDataSyncWayDelay&&_delayLoopRunning) {
+        return;
+    }
+    
     //检查并且去判断应该执行什么操作
     [self checkAndDoPullWithFoundEmptyBlock:nil];
 }
 
 - (void)resetAllFailCount {
-    [_tasks enumerateKeysAndObjectsUsingBlock:^(MLDataSyncPoolTask *t, id  _Nonnull obj, BOOL * _Nonnull stop) {
+    [_tasks enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, MLDataSyncPoolTask *t, BOOL * _Nonnull stop) {
         t.failCount = 0;
     }];
     

@@ -45,7 +45,7 @@
     
     //更新UI，并且对useriD标记使用
     self.user = [[ExampleUserDefaults defaults] userWithUserID:userID];
-    [[ExampleUserDefaults defaults]useUserID:userID];
+    [[ExampleUserDefaults defaults]signUseForUserID:userID];
 }
 
 - (void)setUser:(User *)user {

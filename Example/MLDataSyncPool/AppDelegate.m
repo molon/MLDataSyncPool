@@ -8,6 +8,7 @@
 
 #import "AppDelegate.h"
 #import <MLKit.h>
+#import "ExampleUserDefaults.h"
 
 @interface AppDelegate ()
 
@@ -20,6 +21,8 @@
     // Override point for customization after application launch.
     [[MLKitManager defaultManager]setupWithDDLog:YES];
     [[MLAPIManager defaultManager]setupWithSessionConfiguration:nil];
+    
+    [[ExampleUserDefaults defaults]setup];
     
     return YES;
 }

@@ -43,7 +43,8 @@ NSString * const UserDetailsDidChangeNotificationUserInfoKey = @"userIDs";
     self = [super init];
     if (self) {
         WEAK_SELF
-        self.dataSyncPool = [[MLDataSyncPool alloc]initWithDelay:300 maxFailCount:3 pullBlock:^(NSSet * _Nonnull keys, MLDataSyncPoolPullCallBackBlock  _Nonnull callback) {
+        //设置为800也OK啦，更新罢了，不需要太及时，减少请求更重要
+        _dataSyncPool = [[MLDataSyncPool alloc]initWithDelay:800 maxFailCount:3 pullBlock:^(NSSet * _Nonnull keys, MLDataSyncPoolPullCallBackBlock  _Nonnull callback) {
             //做拉取请求
             ExampleAPIHelper *helper = [ExampleAPIHelper new];
             helper.p_userIDs = [[keys allObjects]componentsJoinedByString:@","];
@@ -63,25 +64,36 @@ NSString * const UserDetailsDidChangeNotificationUserInfoKey = @"userIDs";
             [self syncUsers:[datas allValues]];
         }];
         
-#warning test 
-        self.users = [NSDictionary<NSString*,User *><User> new];
+        [[NSNotificationCenter defaultCenter]addObserver:self selector:@selector(applicationDidBecomeActive) name:UIApplicationDidBecomeActiveNotification object:nil];
     }
     return self;
 }
 
-#pragma mark - helper
-- (User*)userWithUserID:(NSString*)userID {
-#warning 这里如果实际做的话，由于是sqlite存储，每次都去查一次很耗性能，最好得在这里做内存缓存，根据一些方式控制内存缓存大小，例如双链表LRU
-    User *u = self.users[userID];
-    if (!u) {
-        u = [User new];
-        u.ID = userID;
-        u.dirty = YES;
-        [self syncUsers:@[u]];
-    }
-    return u;
+- (void)dealloc {
+    [[NSNotificationCenter defaultCenter]removeObserver:self];
 }
 
+#pragma mark - event
+//每次active都尝试去刷新要使用的User信息
+- (void)applicationDidBecomeActive {
+#warning 这里dirty了是OK，但是当前显示的User并没有立即获取到通知，他们不会去执行signUse方法的
+    //dirty所有user
+    for (User *u in [self.users allValues]) {
+        u.dirty = YES;
+    }
+    self.users = self.users; //MLUserDefaults自动持久化只能通过setter方法
+    
+    //清空同步池的failCount
+    [_dataSyncPool resetAllFailCount];
+    
+    //找到所有的无详情用户，直接性的立即重试他们
+    NSArray *userIDs = [self noDetailUserIDs];
+    if (userIDs.count>0) {
+        [_dataSyncPool syncDataWithKeys:userIDs way:MLDataSyncWayRightNow];
+    }
+}
+
+#pragma mark - helper
 //同步一些最新用户信息到本地，实际项目肯定不能这样存，这是demo
 - (void)syncUsers:(NSArray<User*>*)users {
     NSMutableDictionary<NSString*,User *><User> *result = [self.users mutableCopy];
@@ -108,26 +120,45 @@ NSString * const UserDetailsDidChangeNotificationUserInfoKey = @"userIDs";
 }
 
 
-//标记使用了一次
-- (void)useUserID:(NSString*)userID {
-    User *u = [self userWithUserID:userID];
-    //向MLDataSyncPool里投递同步任务，新存储要以立即更新模式
-    if ([u isNoDetail]) {
-        [self.dataSyncPool syncDataWithKeys:@[userID] way:MLDataSyncWayRightNow];
-    }else if ([u needUpdate]) {
-        [self.dataSyncPool syncDataWithKeys:@[userID] way:MLDataSyncWayDelay];
-    }
-}
-
 //找到无详情的用户
-- (NSArray<User*>*)noDetailUsers {
-    NSMutableArray<User*> *result = [NSMutableArray<User*> array];
+- (NSArray*)noDetailUserIDs {
+    NSMutableArray *result = [NSMutableArray array];
     for (User *user in [self.users allValues]) {
         if ([user isNoDetail]) {
-            [result addObject:user];
+            [result addObject:user.ID];
         }
     }
     return (result.count>0)?result:nil;
+}
+
+#pragma mark - outcall
+- (void)setup {}
+
+- (User*)userWithUserID:(NSString*)userID {
+#warning 这里如果实际做的话，由于是sqlite存储，每次都去查一次很耗性能，最好得在这里做内存缓存，根据一些方式控制内存缓存大小，例如双链表LRU
+    User *u = self.users[userID];
+    if (!u) {
+        u = [User new];
+        u.ID = userID;
+        u.dirty = YES;
+        [self syncUsers:@[u]];
+    }
+    return u;
+}
+
+//标记使用了一次
+- (void)signUseForUserID:(NSString*)userID {
+    User *u = [self userWithUserID:userID];
+    //向MLDataSyncPool里投递同步任务，新存储要以立即更新模式
+    if ([u isNoDetail]) {
+        [_dataSyncPool syncDataWithKeys:@[userID] way:MLDataSyncWayRightNow];
+    }else if ([u needUpdate]) {
+        [_dataSyncPool syncDataWithKeys:@[userID] way:MLDataSyncWayDelay];
+    }
+}
+
+- (void)syncUsersWithUserIDs:(NSArray*)userIDs {
+    [_dataSyncPool syncDataWithKeys:userIDs way:MLDataSyncWayRightNow];
 }
 
 
