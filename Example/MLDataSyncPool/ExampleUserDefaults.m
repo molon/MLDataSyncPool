@@ -28,7 +28,14 @@ NSString * const UserDetailsDidChangeNotificationUserInfoKey = @"userIDs";
 }
 
 - (User*)userWithUserID:(NSString*)userID {
-    return self.users[userID];
+#warning 这里如果实际做的话，由于是sqlite存储，每次都去查一次很耗性能，最好得在这里做内存缓存，根据一些方式控制内存缓存大小，例如双链表LRU
+    User *u = self.users[userID];
+    if (!u) {
+        u = [User new];
+        u.dirty = YES;
+        [self syncUsers:@[u]];
+    }
+    return u;
 }
 
 //同步一些最新用户信息到本地，实际项目肯定不能这样存，这是demo
@@ -60,14 +67,8 @@ NSString * const UserDetailsDidChangeNotificationUserInfoKey = @"userIDs";
 //标记使用了一次
 - (void)useUserID:(NSString*)userID {
     User *u = [self userWithUserID:userID];
-    if (!u) {
-        u = [User new];
-        u.dirty = YES;
-        [self syncUsers:@[u]];
-    }
-    
     if ([u needUpdate]) {
-        //向MLDataSyncPool里投递同步任务
+        //向MLDataSyncPool里投递同步任务，新存储要以立即更新模式
 #warning not add
     }
 }
