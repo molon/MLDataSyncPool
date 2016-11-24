@@ -28,12 +28,12 @@
     [self.view addSubview:self.tableView];
     
     self.userIDs = @[
-                     @"1",@"2",@"3",@"4",@"5",@"6",@"7",@"8",@"111",@"222",@"9"
+                     @"1",@"2",@"3",@"4",@"5",@"6",@"7",@"8",@"111",@"222",@"9",@"10",@"11",@"12",@"13",@"14",@"15"
                      ];
     
 #warning 如果确定是新出现的一堆userIDs的话，一般发现新群这类的，需要主动去执行的强制立即同步的方法syncUsersWithUserIDs:，而且要在对应User被使用以前，防止N多请求产生
     //这里因为不好模拟，我们这里比较丑陋的简单判断下是否已有第一个ID的存储来测试下效果，删除重新安装会触发判断成功
-    if ([[[ExampleUserDefaults defaults]userWithUserID:[self.userIDs firstObject]]isNoDetail]) {
+    if (![[ExampleUserDefaults defaults]userWithUserID:[self.userIDs firstObject]]) {
         [[ExampleUserDefaults defaults]syncUsersWithUserIDs:self.userIDs];
     }
 }

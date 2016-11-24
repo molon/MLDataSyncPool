@@ -103,11 +103,14 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
     return result;
 }
 
-- (void)doPullWithValidWaitTasks:(NSSet*)waitTasks foundEmptyBlock:(void(^)())foundEmptyBlock {
+//completeBlock只表示一次拉取的结束，完事之后自动启动的后续拉取就不算数了
+- (void)doPullWithValidWaitTasks:(NSSet*)waitTasks completeBlock:(void(^)())completeBlock {
     NSAssert(self.pullBlock, @"pullBlock must not be nil");
     NSAssert(self.newDataBlock, @"newDataBlock must not be nil");
     if (waitTasks.count<=0) {
-        if (foundEmptyBlock) foundEmptyBlock();
+        if (completeBlock) {
+            completeBlock();
+        }
         return;
     }
     
@@ -137,17 +140,20 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
         
         self.newDataBlock(result);
         
-        [self checkAndDoPullWithFoundEmptyBlock:foundEmptyBlock];
+        if (completeBlock) {
+            completeBlock();
+        }
+        
+        [self checkAndDoPull];
     };
     
     self.pullBlock(keys,callback);
 }
 
-- (void)checkAndDoPullWithFoundEmptyBlock:(void(^)())foundEmptyBlock {
+- (void)checkAndDoPull {
     //检查现在是否有有效等待的立即任务，如果有立即开启下一次拉取，否则就跑去delay逻辑里
     NSSet *waitTasks = [self allValidWaitTasks];
     if (waitTasks.count<=0) {
-        if (foundEmptyBlock) foundEmptyBlock();
         return; //下面的一堆无用行为不做了
     }
     
@@ -161,7 +167,7 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
     
     if (nextPullRightNow) {
         //发现有立即任务直接插拉取
-        [self doPullWithValidWaitTasks:waitTasks foundEmptyBlock:nil];
+        [self doPullWithValidWaitTasks:waitTasks completeBlock:nil];
     }else{
         //直接启动delay拉取loop
         [self doDelayPull];
@@ -172,12 +178,11 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
 - (void)doDelayPullWithoutCheckRunning {
     //判断上次请求sync时间到现在是否超过了delay
     NSTimeInterval since = [[NSDate date] timeIntervalSinceDate:_lastRequestSyncTime]*1000;
-    NSTimeInterval offset = _delay-since;
+    NSTimeInterval offset = fmin(_delay-since, _delay);
     if (offset<=0) {
         __weak __typeof__(self) weak_self = self;
-        [self doPullWithValidWaitTasks:[self allValidWaitTasks] foundEmptyBlock:^{
+        [self doPullWithValidWaitTasks:[self allValidWaitTasks] completeBlock:^{
             __typeof__(self) self = weak_self;
-            
             self->_delayLoopRunning = NO; //结束delay loop
         }];
     }else{
@@ -220,7 +225,7 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
     }
     
     //检查并且去判断应该执行什么操作
-    [self checkAndDoPullWithFoundEmptyBlock:nil];
+    [self checkAndDoPull];
 }
 
 - (void)resetAllFailCount {
@@ -229,7 +234,7 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
     }];
     
     //检查并且去判断应该执行什么操作
-    [self checkAndDoPullWithFoundEmptyBlock:nil];
+    [self checkAndDoPull];
 }
 
 @end

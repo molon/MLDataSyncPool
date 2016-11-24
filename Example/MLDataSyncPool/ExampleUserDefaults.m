@@ -9,6 +9,7 @@
 #import "ExampleUserDefaults.h"
 #import <MLDataSyncPool.h>
 #import "ExampleAPIHelper.h"
+#import <MLKit.h>
 
 NSString * const UserDetailsDidChangeNotificationName = @"com.molon.UserDetailsDidChangeNotificationName";
 NSString * const UserDetailsDidChangeNotificationUserInfoKey = @"userIDs";
@@ -45,10 +46,13 @@ NSString * const UserDetailsDidChangeNotificationUserInfoKey = @"userIDs";
         WEAK_SELF
         //设置为800也OK啦，更新罢了，不需要太及时，减少请求更重要
         _dataSyncPool = [[MLDataSyncPool alloc]initWithDelay:800 maxFailCount:3 pullBlock:^(NSSet * _Nonnull keys, MLDataSyncPoolPullCallBackBlock  _Nonnull callback) {
+            DDLogDebug(@"Pull: %@",[[keys allObjects]componentsJoinedByString:@","]);
             //做拉取请求
             ExampleAPIHelper *helper = [ExampleAPIHelper new];
             helper.p_userIDs = [[keys allObjects]componentsJoinedByString:@","];
             [helper requestWithBefore:nil complete:^(MLAPIHelper * _Nonnull apiHelper) {
+                DDLogDebug(@"Pull %@: %@",apiHelper.state==MLAPIHelperStateRequestSucceed?@"Success":@"Failed",[[keys allObjects]componentsJoinedByString:@","]);
+                
                 NSMutableDictionary *result = nil;
                 if (helper.r_rows.count>0) {
                     result = [NSMutableDictionary dictionaryWithCapacity:helper.r_rows.count];
@@ -76,7 +80,7 @@ NSString * const UserDetailsDidChangeNotificationUserInfoKey = @"userIDs";
 #pragma mark - event
 //每次active都尝试去刷新要使用的User信息
 - (void)applicationDidBecomeActive {
-#warning 这里dirty了是OK，但是当前显示的User并没有立即获取到通知，他们不会去执行signUse方法的，这个还只能他们自己做，因为这里并不知道哪些User在显示中，还有就是其实非空详情用户，这点及时性更新真心没有太大必要，这个不加也无妨。
+#warning 这里dirty了是OK，但是当前显示的User并没有立即获取到通知，他们不会去执行signUse方法的，这个还只能他们自己做，因为这里并不知道哪些User在显示中，还有就是其实非空详情用户，这点及时性更新真心没有太大必要，这个不加也无妨。不过后来又想了一下，主动去更新已显示的也是减少请求的策略之一。
     
     //dirty所有user
     for (User *u in [self.users allValues]) {
