@@ -14,7 +14,7 @@ FOUNDATION_EXPORT NSString * const UserDetailsDidChangeNotificationUserInfoKey;
 
 FOUNDATION_EXPORT NSString * const AllUserDetailsDidDirtyNotificationName;
 
-#warning 这个只是demo罢了，简单搞一搞，实际情况请使用sqlite
+#warning 这个只是demo罢了，简单搞一搞，实际情况请使用sqlite，MLUserDefaults有自动读取存储绑定到properties和执行setter时候自动存储的特性
 @interface ExampleUserDefaults : MLUserDefaults
 
 - (void)setup;
