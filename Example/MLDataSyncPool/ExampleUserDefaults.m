@@ -14,6 +14,8 @@
 NSString * const UserDetailsDidChangeNotificationName = @"com.molon.UserDetailsDidChangeNotificationName";
 NSString * const UserDetailsDidChangeNotificationUserInfoKey = @"userIDs";
 
+NSString * const AllUserDetailsDidDirtyNotificationName = @"com.molon.AllUserDetailsDidDirtyNotificationName";
+
 @interface ExampleUserDefaults()
 
 @property (nonatomic, strong) NSDictionary<NSString*,User *><User> *users;
@@ -80,13 +82,14 @@ NSString * const UserDetailsDidChangeNotificationUserInfoKey = @"userIDs";
 #pragma mark - event
 //每次active都尝试去刷新要使用的User信息
 - (void)applicationDidBecomeActive {
-#warning 这里dirty了是OK，但是当前显示的User并没有立即获取到通知，他们不会去执行signUse方法的，这个还只能他们自己做，因为这里并不知道哪些User在显示中，还有就是其实非空详情用户，这点及时性更新真心没有太大必要，这个不加也无妨。不过后来又想了一下，主动去更新已显示的也是减少请求的策略之一。
-    
     //dirty所有user
     for (User *u in [self.users allValues]) {
         u.dirty = YES;
     }
     self.users = self.users; //MLUserDefaults自动持久化只能通过setter方法
+    
+    //投递消息出去，谁在显示中自己去signUse，这样是有好处的，否则用户来回的小幅度滚动列表可能会引发多请求，这个还只能他们自己做，这里不知道哪些正在显示中的
+    [[NSNotificationCenter defaultCenter]postNotificationOnMainThreadWithName:AllUserDetailsDidDirtyNotificationName object:nil];
     
     //清空同步池的failCount
     [_dataSyncPool resetAllFailCount];

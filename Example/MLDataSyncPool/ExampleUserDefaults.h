@@ -12,6 +12,8 @@
 FOUNDATION_EXPORT NSString * const UserDetailsDidChangeNotificationName;
 FOUNDATION_EXPORT NSString * const UserDetailsDidChangeNotificationUserInfoKey;
 
+FOUNDATION_EXPORT NSString * const AllUserDetailsDidDirtyNotificationName;
+
 #warning 这个只是demo罢了，简单搞一搞，实际情况请使用sqlite
 @interface ExampleUserDefaults : MLUserDefaults
 
