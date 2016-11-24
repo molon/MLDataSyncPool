@@ -53,13 +53,17 @@ NSString * const AllUserDetailsDidDirtyNotificationName = @"com.molon.AllUserDet
             ExampleAPIHelper *helper = [ExampleAPIHelper new];
             helper.p_userIDs = [[keys allObjects]componentsJoinedByString:@","];
             [helper requestWithBefore:nil complete:^(MLAPIHelper * _Nonnull apiHelper) {
-                DDLogDebug(@"Pull %@: %@",apiHelper.state==MLAPIHelperStateRequestSucceed?@"Success":@"Failed",[[keys allObjects]componentsJoinedByString:@","]);
+                DDLogDebug(@"Pull Complete: %@",[[keys allObjects]componentsJoinedByString:@","]);
                 
                 NSMutableDictionary *result = nil;
                 if (helper.r_rows.count>0) {
                     result = [NSMutableDictionary dictionaryWithCapacity:helper.r_rows.count];
                     //整理出字典
                     for (User *user in helper.r_rows) {
+#warning 因为有假接口的存在，这里客户端去做下过滤，关于假接口去看ExampleAPIHelper.m
+                        if (![keys containsObject:user.ID]) {
+                            continue;
+                        }
                         result[user.ID] = user;
                     }
                 }
