@@ -36,6 +36,13 @@
     if (![[ExampleUserDefaults defaults]userWithUserID:[self.userIDs firstObject]]) {
         [[ExampleUserDefaults defaults]syncUsersWithUserIDs:self.userIDs];
     }
+    
+    
+    WEAK_SELF
+    self.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc]initWithTitle:@"ReloadTable" style:UIBarButtonItemStylePlain actionBlock:^(UIBarButtonItem * _Nonnull barButtonItem) {
+        STRONG_SELF
+        [self.tableView reloadData];
+    }];
 }
 
 - (void)didReceiveMemoryWarning {

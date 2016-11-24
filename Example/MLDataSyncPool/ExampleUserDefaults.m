@@ -45,7 +45,7 @@ NSString * const UserDetailsDidChangeNotificationUserInfoKey = @"userIDs";
     if (self) {
         WEAK_SELF
         //设置为800也OK啦，更新罢了，不需要太及时，减少请求更重要
-        _dataSyncPool = [[MLDataSyncPool alloc]initWithDelay:800 maxFailCount:3 pullBlock:^(NSSet * _Nonnull keys, MLDataSyncPoolPullCallBackBlock  _Nonnull callback) {
+        _dataSyncPool = [[MLDataSyncPool alloc]initWithDelay:800 maxFailCount:2 pullBlock:^(NSSet * _Nonnull keys, MLDataSyncPoolPullCallBackBlock  _Nonnull callback) {
             DDLogDebug(@"Pull: %@",[[keys allObjects]componentsJoinedByString:@","]);
             //做拉取请求
             ExampleAPIHelper *helper = [ExampleAPIHelper new];
@@ -146,6 +146,7 @@ NSString * const UserDetailsDidChangeNotificationUserInfoKey = @"userIDs";
 
 //标记使用了一次
 - (void)signUseForUserID:(NSString*)userID {
+    NSAssert(userID, @"%@:userID must be not nil",NSStringFromSelector(_cmd));
     User *u = [self userWithUserID:userID];
     if (!u) {
         u = [User new];
