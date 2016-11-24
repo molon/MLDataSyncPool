@@ -84,7 +84,7 @@ NSString * const AllUserDetailsDidDirtyNotificationName = @"com.molon.AllUserDet
 }
 
 #pragma mark - event
-//每次active都尝试去刷新要使用的User信息
+#warning 每次active都尝试去刷新要使用的User信息，这个只是为了测试方便，实际使用的话推荐以进入到前台为准
 - (void)applicationDidBecomeActive {
     //dirty所有user
     for (User *u in [self.users allValues]) {
