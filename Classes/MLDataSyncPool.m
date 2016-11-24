@@ -8,16 +8,16 @@
 
 #import "MLDataSyncPool.h"
 
-typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
-    MLDataSyncPullStatusWait = 0, //等待状态，未开始
-    MLDataSyncPullStatusPulling, //拉取中
+typedef NS_ENUM(BOOL, MLDataSyncPullState) {
+    MLDataSyncPullStateWait = 0, //等待状态，未开始
+    MLDataSyncPullStatePulling, //拉取中
 };
 
 @interface MLDataSyncPoolTask : NSObject
 
 @property (nonatomic, copy) NSString *key;
 @property (nonatomic, assign) MLDataSyncWay syncWay;
-@property (nonatomic, assign) MLDataSyncPullStatus status;
+@property (nonatomic, assign) MLDataSyncPullState pullState;
 
 //失败次数
 @property (nonatomic, assign) NSInteger failCount;
@@ -75,7 +75,7 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
     if (!task) {
         task = [MLDataSyncPoolTask new];
         task.key = key;
-        task.status = MLDataSyncPullStatusWait;
+        task.pullState = MLDataSyncPullStateWait;
         task.syncWay = syncWay;
         
         _tasks[key] = task; //记录下来
@@ -96,7 +96,7 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
 - (NSSet*)allValidWaitTasks {
     NSMutableSet *result = [NSMutableSet set];
     [_tasks enumerateKeysAndObjectsUsingBlock:^(id  _Nonnull key, MLDataSyncPoolTask *t, BOOL * _Nonnull stop) {
-        if (t.failCount<_maxFailCount&&t.status==MLDataSyncPullStatusWait) {
+        if (t.failCount<_maxFailCount&&t.pullState==MLDataSyncPullStateWait) {
             [result addObject:t];
         }
     }];
@@ -118,7 +118,7 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
     
     //挨个标记拉取状态
     [waitTasks enumerateObjectsUsingBlock:^(MLDataSyncPoolTask *t, BOOL * _Nonnull stop) {
-        t.status = MLDataSyncPullStatusPulling;
+        t.pullState = MLDataSyncPullStatePulling;
         [keys addObject:t.key];
     }];
     
@@ -127,13 +127,13 @@ typedef NS_ENUM(BOOL, MLDataSyncPullStatus) {
     MLDataSyncPoolPullCallBackBlock callback = ^(NSDictionary *result) {
         __typeof__(self) self = weak_self;
         
-        //检查结果，哪些task已经获取结果的就把对应任务给剔除掉，否则重置其status
+        //检查结果，哪些task已经获取结果的就把对应任务给剔除掉，否则重置其pullState
         for (NSString *key in keys) {
             if (result[key]) {
                 [self.tasks removeObjectForKey:key];
             }else{
                 MLDataSyncPoolTask *t = self.tasks[key];
-                t.status = MLDataSyncPullStatusWait;
+                t.pullState = MLDataSyncPullStateWait;
                 t.failCount++;
             }
         }
