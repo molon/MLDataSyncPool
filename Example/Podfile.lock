@@ -44,14 +44,12 @@ PODS:
 
 DEPENDENCIES:
   - MLDataSyncPool (from `../MLDataSyncPool.podspec`)
-  - MLKit (from `~/MLProjects/MLKit`)
+  - MLKit (~> 0.2.3)
   - SDWebImage (~> 3.8.2)
 
 EXTERNAL SOURCES:
   MLDataSyncPool:
     :path: "../MLDataSyncPool.podspec"
-  MLKit:
-    :path: "~/MLProjects/MLKit"
 
 SPEC CHECKSUMS:
   AFNetworking: 5e0e199f73d8626b11e79750991f5d173d1f8b67
@@ -66,6 +64,6 @@ SPEC CHECKSUMS:
   SDWebImage: '098e97e6176540799c27e804c96653ee0833d13c'
   YYCache: 8105b6638f5e849296c71f331ff83891a4942952
 
-PODFILE CHECKSUM: a780ee648bcc7e5e1f9815e361743adfc18a260f
+PODFILE CHECKSUM: 53b9e7a41e510d6a13e195fbb09c8ffd16dc002e
 
 COCOAPODS: 1.1.1
