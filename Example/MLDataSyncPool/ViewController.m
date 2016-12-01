@@ -62,6 +62,7 @@
 - (UITableView *)tableView {
     if (!_tableView) {
         UITableView *tableView = [[UITableView alloc]init];
+        tableView.tableFooterView = [[UIView alloc]initWithFrame:CGRectZero];
         tableView.delegate = self;
         tableView.dataSource = self;
         [tableView registerClass:[UserTableViewCell class] forCellReuseIdentifier:[UserTableViewCell cellReuseIdentifier]];

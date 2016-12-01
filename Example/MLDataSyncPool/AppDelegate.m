@@ -21,6 +21,10 @@
     // Override point for customization after application launch.
     [[MLKitManager defaultManager]setupWithDDLog:YES];
     [[MLAPIManager defaultManager]setupWithSessionConfiguration:nil];
+    NSMutableSet *acceptableContentTypes = [[MLAPIManager defaultManager].httpSessionManager.responseSerializer.acceptableContentTypes mutableCopy];
+    [acceptableContentTypes addObject:@"text/plain"];
+    [acceptableContentTypes addObject:@"text/html"];
+    [MLAPIManager defaultManager].httpSessionManager.responseSerializer.acceptableContentTypes = acceptableContentTypes;
     
     [[ExampleUserDefaults defaults]setup];
     

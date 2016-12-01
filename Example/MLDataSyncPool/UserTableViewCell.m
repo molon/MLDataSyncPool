@@ -67,7 +67,7 @@
 - (void)setUser:(User *)user {
     _user = user;
 
-    self.textLabel.text = user.name;
+    self.textLabel.text = [NSString stringWithFormat:@"ID:%@ Name:%@",user.ID,user.name?:@"Unknown"];
 }
 
 @end
