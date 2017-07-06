@@ -31,7 +31,7 @@ NSString * const AllUserDetailsDidDirtyNotificationName = @"com.molon.AllUserDet
 + (NSDictionary *)modelCustomPropertyDefaultValueMapper {
     NSMutableDictionary *dict = [[super modelCustomPropertyDefaultValueMapper]mutableCopy];
     [dict addEntriesFromDictionary:@{
-                                    @"users":[NSDictionary<NSString*,User *><User> new],
+                                     @"users":[NSDictionary<NSString*,User *><User> new],
                                      }];
     return dict;
 }
@@ -128,7 +128,11 @@ NSString * const AllUserDetailsDidDirtyNotificationName = @"com.molon.AllUserDet
     self.users = result;
     
     //投递更新的userIDs出去
-    [[NSNotificationCenter defaultCenter]postNotificationOnMainThreadWithName:UserDetailsDidChangeNotificationName object:nil userInfo:@{UserDetailsDidChangeNotificationUserInfoKey:notificationUserIDs}];
+    if (notificationUserIDs.count>0) {
+        dispatch_force_async_on_main_queue(^{
+            [[NSNotificationCenter defaultCenter]postNotificationOnMainThreadWithName:UserDetailsDidChangeNotificationName object:nil userInfo:@{UserDetailsDidChangeNotificationUserInfoKey:notificationUserIDs}];
+        });
+    }
 }
 
 
@@ -162,10 +166,7 @@ NSString * const AllUserDetailsDidDirtyNotificationName = @"com.molon.AllUserDet
         [self syncUsers:@[u]];
     }
     
-    //向MLDataSyncPool里投递同步任务，新存储要以立即更新模式
-    if ([u isNoDetail]) {
-        [_dataSyncPool syncDataWithKeys:@[userID] way:MLDataSyncWayRightNow];
-    }else if ([u needUpdate]) {
+    if ([u needUpdate]) {
         [_dataSyncPool syncDataWithKeys:@[userID] way:MLDataSyncWayDelay];
     }
 }
