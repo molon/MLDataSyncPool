@@ -47,7 +47,7 @@ NSString * const AllUserDetailsDidDirtyNotificationName = @"com.molon.AllUserDet
     if (self) {
         WEAK_SELF
         //设置为800也OK啦，更新罢了，不需要太及时，减少请求更重要
-        _dataSyncPool = [[MLDataSyncPool alloc]initWithDelay:800 maxFailCount:2 pullBlock:^(NSSet * _Nonnull keys, MLDataSyncPoolPullCallBackBlock  _Nonnull callback) {
+        _dataSyncPool = [[MLDataSyncPool alloc]initWithDelay:800 maxPullCountOnce:50 maxFailCount:2 pullBlock:^(NSSet * _Nonnull keys, MLDataSyncPoolPullCallBackBlock  _Nonnull callback) {
             DDLogDebug(@"Pull: %@",[[keys allObjects]componentsJoinedByString:@","]);
             //做拉取请求, 这个是MLKit里的请求封装罢了，请自行替换自己的实现。
             ExampleAPIHelper *helper = [ExampleAPIHelper new];

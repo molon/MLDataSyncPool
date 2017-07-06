@@ -31,6 +31,7 @@ typedef NS_ENUM(BOOL, MLDataSyncPullState) {
 
 @property (nonatomic, assign) NSInteger maxFailCount;
 @property (nonatomic, assign) NSTimeInterval delay;
+@property (nonatomic, assign) NSInteger maxPullCountOnce;
 @property (nonatomic, copy) void(^pullBlock)(NSSet *keys,MLDataSyncPoolPullCallBackBlock callback);
 @property (nonatomic, copy) void(^newDataBlock)(NSDictionary *datas);
 
@@ -44,12 +45,13 @@ typedef NS_ENUM(BOOL, MLDataSyncPullState) {
     BOOL _delayLoopRunning; //delay循环是否在运行中
 }
 
-- (instancetype)initWithDelay:(NSTimeInterval)delay maxFailCount:(NSInteger)maxFailCount pullBlock:(void (^)(NSSet *, MLDataSyncPoolPullCallBackBlock))pullBlock newDataBlock:(void (^)(NSDictionary *))newDataBlock {
+- (instancetype)initWithDelay:(NSTimeInterval)delay maxPullCountOnce:(NSInteger)maxPullCountOnce maxFailCount:(NSInteger)maxFailCount pullBlock:(void (^)(NSSet *keys, MLDataSyncPoolPullCallBackBlock callback))pullBlock newDataBlock:(void (^)(NSDictionary * datas))newDataBlock {
     self = [super init];
     if (self) {
         self.tasks = [NSMutableDictionary dictionary];
         self.maxFailCount = maxFailCount;
         self.delay = delay;
+        self.maxPullCountOnce = maxPullCountOnce;
         self.pullBlock = pullBlock;
         self.newDataBlock = newDataBlock;
     }
@@ -65,6 +67,11 @@ typedef NS_ENUM(BOOL, MLDataSyncPullState) {
 - (void)setDelay:(NSTimeInterval)delay {
     NSAssert(delay>10, @"delay must >10");
     _delay = delay;
+}
+
+- (void)setMaxPullCountOnce:(NSInteger)maxPullCountOnce {
+    NSAssert(maxPullCountOnce>0, @"maxPullCountOnce must >0");
+    _maxPullCountOnce = maxPullCountOnce;
 }
 
 #pragma mark - helper
@@ -118,6 +125,10 @@ typedef NS_ENUM(BOOL, MLDataSyncPullState) {
     
     //挨个标记拉取状态
     [waitTasks enumerateObjectsUsingBlock:^(MLDataSyncPoolTask *t, BOOL * _Nonnull stop) {
+        if (keys.count>=_maxPullCountOnce) { //一次最大拉取数目
+            *stop = YES;
+            return;
+        }
         t.pullState = MLDataSyncPullStatePulling;
         [keys addObject:t.key];
     }];
@@ -147,6 +158,11 @@ typedef NS_ENUM(BOOL, MLDataSyncPullState) {
         [self checkAndDoPull];
     };
     
+    if (keys.count<=0) {
+        callback(nil);
+        return;
+    }
+    
     self.pullBlock(keys,callback);
 }
 
@@ -165,8 +181,8 @@ typedef NS_ENUM(BOOL, MLDataSyncPullState) {
         }
     }];
     
-    if (nextPullRightNow) {
-        //发现有立即任务直接插拉取
+    if (nextPullRightNow||waitTasks.count>=_maxPullCountOnce) {
+        //发现有立即任务直接执行一次拉取，如果到达一次最大拉取数目的话，也立即执行拉取
         [self doPullWithValidWaitTasks:waitTasks completeBlock:nil];
     }else{
         //直接启动delay拉取loop
@@ -179,9 +195,10 @@ typedef NS_ENUM(BOOL, MLDataSyncPullState) {
     //判断上次请求sync时间到现在是否超过了delay
     NSTimeInterval since = [[NSDate date] timeIntervalSinceDate:_lastRequestSyncTime]*1000;
     NSTimeInterval offset = fmin(_delay-since, _delay);
-    if (offset<=0) {
+    NSSet *tasks = [self allValidWaitTasks];
+    if (offset<=0||tasks.count>=_maxPullCountOnce) {
         __weak __typeof__(self) weak_self = self;
-        [self doPullWithValidWaitTasks:[self allValidWaitTasks] completeBlock:^{
+        [self doPullWithValidWaitTasks:tasks completeBlock:^{
             __typeof__(self) self = weak_self;
             self->_delayLoopRunning = NO; //结束delay loop
         }];
@@ -218,11 +235,6 @@ typedef NS_ENUM(BOOL, MLDataSyncPullState) {
     }
     
     _lastRequestSyncTime = [NSDate date];
-    
-    //TIPS: delay way而且_delayLoopRunning为YES的情况在这是还去check必然无意义的，为了性能考虑简单做下过滤吧
-    if (way==MLDataSyncWayDelay&&_delayLoopRunning) {
-        return;
-    }
     
     //检查并且去判断应该执行什么操作
     [self checkAndDoPull];
