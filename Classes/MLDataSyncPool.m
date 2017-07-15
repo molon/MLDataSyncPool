@@ -135,7 +135,7 @@ typedef NS_ENUM(BOOL, MLDataSyncPullState) {
     
     //执行拉取方法
     __weak __typeof__(self) weak_self = self;
-    MLDataSyncPoolPullCallBackBlock callback = ^(NSDictionary *result) {
+    MLDataSyncPoolPullCallBackBlock callback = ^(NSDictionary * _Nullable result) {
         __typeof__(self) self = weak_self;
         
         //检查结果，哪些task已经获取结果的就把对应任务给剔除掉，否则重置其pullState
