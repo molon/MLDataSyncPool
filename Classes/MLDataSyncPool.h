@@ -15,7 +15,7 @@ typedef NS_ENUM(NSUInteger, MLDataSyncWay) {
     MLDataSyncWayDelay, //延迟同步方式，实际使用中总是要同步的但是延迟多久不固定
 };
 
-typedef void (^MLDataSyncPoolPullCallBackBlock)(NSDictionary *result);
+typedef void (^MLDataSyncPoolPullCallBackBlock)(NSDictionary *_Nullable result);
 
 @interface MLDataSyncPool : NSObject
 
@@ -45,7 +45,7 @@ typedef void (^MLDataSyncPoolPullCallBackBlock)(NSDictionary *result);
  
  @return instance
  */
-- (instancetype)initWithDelay:(NSTimeInterval)delay maxPullCountOnce:(NSInteger)maxPullCountOnce maxFailCount:(NSInteger)maxFailCount pullBlock:(void (^)(NSSet *keys, MLDataSyncPoolPullCallBackBlock callback))pullBlock newDataBlock:(void (^)(NSDictionary * datas))newDataBlock;
+- (instancetype)initWithDelay:(NSTimeInterval)delay maxPullCountOnce:(NSInteger)maxPullCountOnce maxFailCount:(NSInteger)maxFailCount pullBlock:(void (^)(NSSet *keys, MLDataSyncPoolPullCallBackBlock callback))pullBlock newDataBlock:(void (^)(NSDictionary *_Nullable datas))newDataBlock;
 
 - (instancetype)init NS_UNAVAILABLE;
 
